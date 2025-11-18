@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 fastapi
 uvicorn
 motor
@@ -27,4 +28,35 @@ aiofiles
 httpx
 qrcode[pil]
 pillow
+=======
+fastapi
+uvicorn
+motor
+pymongo
+python-dotenv
+python-multipart
+bcrypt
+pyjwt
+sendgrid
+twilio
+requests
+pandas
+openpyxl
+torch
+transformers
+langchain
+langchain-community
+langchain-core
+langchain-groq
+langchain-text-splitters
+chromadb
+playwright
+beautifulsoup4
+pymupdf
+python-docx
+aiofiles
+httpx
+qrcode[pil]
+pillow
+>>>>>>> 9c30675a2db80bc2621c532f163136b80a8c3e15
 aiohttp
