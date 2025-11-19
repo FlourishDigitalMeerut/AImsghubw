@@ -391,30 +391,32 @@ async def update_campaign(
     """Update WhatsApp campaign - requires whatsapp_marketing key"""
     campaigns_collection = await get_whatsapp_campaigns_collection()
     
-    # Validate required fields
-    if "name" not in campaign_data:
-        raise HTTPException(status_code=400, detail="Campaign name is required")
+    # Check if campaign exists and belongs to user
+    existing_campaign = await campaigns_collection.find_one(
+        {"_id": ObjectId(campaign_id), "user_id": current_user["_id"]}
+    )
     
-    if "type" not in campaign_data:
-        raise HTTPException(status_code=400, detail="Campaign type is required")
+    if not existing_campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
     
-    # Build update fields - only include fields that are provided
+    # Build update fields - all fields are optional
     update_fields = {
-        "name": campaign_data["name"],
-        "type": campaign_data["type"],
         "updated_at": datetime.now(timezone.utc)
     }
     
-    # Optional fields - only update if provided
+    # All fields are optional - only update if provided
     optional_fields = [
-        "status", "message_type", "message_content", 
-        "media_url", "caption", "contacts",
-        "sent_count", "failed_count"
+        "name", "type", "status", "message_type", "message_content", 
+        "media_url", "caption", "contacts", "sent_count", "failed_count"
     ]
     
     for field in optional_fields:
         if field in campaign_data:
             update_fields[field] = campaign_data[field]
+    
+    # Check if any fields were actually provided to update
+    if len(update_fields) == 1:  # Only has updated_at
+        raise HTTPException(status_code=400, detail="No fields provided for update")
     
     result = await campaigns_collection.update_one(
         {"_id": ObjectId(campaign_id), "user_id": current_user["_id"]},
@@ -422,7 +424,7 @@ async def update_campaign(
     )
     
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Campaign not found or no changes made")
+        raise HTTPException(status_code=400, detail="No changes made to campaign")
     
     return {"success": True, "message": "Campaign updated successfully"}
 
