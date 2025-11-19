@@ -27,7 +27,6 @@ aiofiles
 httpx
 qrcode[pil]
 pillow
-=======
 fastapi
 uvicorn
 motor
