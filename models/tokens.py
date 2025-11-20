@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-
 class Token(BaseModel):
     access_token: str
     refresh_token: str
