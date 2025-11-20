@@ -73,3 +73,27 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    otp: str
+
+    @validator('otp')
+    def validate_otp_length(cls, v):
+        if len(v) != 6 or not v.isdigit():
+            raise ValueError('OTP must be 6 digits')
+        return v
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+
+    @validator('new_password')
+    def validate_password_length(cls, v):
+        if len(v) < 6:
+            raise ValueError('Password must be at least 8 characters long')
+        return v
+
+class ResendOTPRequest(BaseModel):
+    pass

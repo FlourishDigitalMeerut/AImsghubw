@@ -101,6 +101,11 @@ async def get_sms_campaigns_collection():
     db = await get_database()
     return db.sms_campaigns
 
+async def get_password_reset_sessions_collection():
+    """Get password reset sessions collection"""
+    db = await get_database()
+    return db.password_reset_sessions
+
 @asynccontextmanager
 async def lifespan_manager(app: FastAPI):
     # Startup

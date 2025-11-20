@@ -5,8 +5,10 @@ from services.database import get_users_collection
 from services.auth import get_current_user, authenticate_user
 from services.token_service import TokenService  
 from utils.security import get_password_hash
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from models.users import UserProfileResponse
+from models.users import ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
+from services.otp_service import OTPService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -360,3 +362,83 @@ async def get_campaign_stats(current_user: dict):
     except Exception as e:
         logger.error(f"Error getting campaign stats: {e}")
         return None
+
+@router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """Step 1: Verify email exists + Send OTP"""
+    try:
+        import uuid
+        session_token = str(uuid.uuid4())  # Keep the UUID, don't overwrite!
+        
+        # Store session token with email in database
+        from services.database import get_password_reset_sessions_collection
+        sessions_collection = await get_password_reset_sessions_collection()
+        
+        await sessions_collection.insert_one({
+            "session_token": session_token,
+            "email": request.email,
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),  
+            "used": False,
+            "otp_verified": False
+        })
+        
+        result = await OTPService.create_otp_for_user(request.email, session_token)
+        
+        return {
+            "success": True, 
+            "message": "OTP sent to your email successfully",
+            "session_token": session_token  # Return the UUID
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in forgot password: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/resend-otp")
+async def resend_otp(
+    x_session_token: str = Header(..., alias="X-Session-Token")
+):
+    """Resend OTP using existing session token"""
+    try:
+        result = await OTPService.resend_otp(x_session_token)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resending OTP: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+       
+@router.post("/verify-otp")
+async def verify_otp(
+    request: VerifyOTPRequest,
+    x_session_token: str = Header(..., alias="X-Session-Token")
+):
+    """Step 2: Verify OTP using session token"""
+    try:
+        result = await OTPService.verify_otp(x_session_token, request.otp)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying OTP: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/reset-password")
+async def reset_password(
+    request: ResetPasswordRequest,
+    x_session_token: str = Header(..., alias="X-Session-Token")
+):
+    """Step 3: Reset password using session token"""
+    try:
+        if len(request.new_password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+        result = await OTPService.reset_password(x_session_token, request.new_password)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting password: {e}")
+        raise HTTPException(status_code=500, detail="Error resetting password")
